@@ -16,7 +16,7 @@ Python code for extracting and organizing student submissions from Moodle. It st
 1. Clone the repository:
 
    ```shell
-   git clone https://github.com/your-username/MoodleUnzipAssistant.git
+   git clone https://github.com/JoseAngelMartinB/MoodleUnzipAssistant.git
    ```
 
 2. Navigate to the repository directory:
