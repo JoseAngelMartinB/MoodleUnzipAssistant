@@ -1,0 +1,26 @@
+# Ignore compiled Python files
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore virtual environment folders
+venv/
+env/
+
+# Ignore log files
+log.txt
+
+# Ignore generated output and error directories
+output/
+Errors/
+
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore editor-specific files
+.vscode/
+.idea/
+
+# Exclude content of MoodleFiles directory
+MoodleFiles/*
