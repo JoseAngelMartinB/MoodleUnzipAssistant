@@ -89,7 +89,8 @@ if store_in_groups:
     students = pd.read_csv(students_file, sep=csv_separator)
     students.replace('\s+', '_', regex=True, inplace=True)
     students['FullName'] = (students['Name'].apply(unidecode.unidecode) +
-        '_' + students['Surname'].apply(unidecode.unidecode))                      
+        '_' + students['Surname'].apply(unidecode.unidecode)) 
+    students['FullName'] = students['FullName'].str.upper()                     
 
 # Process each student and try to decompress their submissions
 i = 0
@@ -103,6 +104,7 @@ for dir_student in os.scandir(input_dir):
         student_name = re.sub(r'_[0-9]+_assignsubmission_file_$', '', 
                               dir_student.name)
         student_name = unidecode.unidecode(student_name).replace(' ', '_')
+        student_name = student_name.upper()
         # Print a progress bar
         printProgressBar(i, len(os.listdir(input_dir)), prefix = 'Progress:', 
                          suffix = 'Complete', length = 50)
