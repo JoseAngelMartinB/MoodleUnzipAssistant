@@ -8,7 +8,7 @@ Moodle. It streamlines the process of decompressing the submissions, while
 intelligently categorizing them by class groups. All the student submissions
 must be a compressed ZIP file, otherwise they will be ignored.
 
-Version: 1.0.0 (June 2023)
+Version: 1.2.0 (January 2025)
 License: MIT License
 Author: José Ángel Martín Baos
 """
@@ -30,7 +30,10 @@ error_dir = "Errors"
 #            this column will be ignored)
 #   - Name: Name of the student
 #   - Surname: Surname/s of the student
-students_file = "students.csv"
+students_file = "alumnos.csv"
+csv_group_column = "Grupo"
+csv_name_column = "Nombre"
+csv_surname_column = "Apellidos"
 
 # CSV separator
 csv_separator = ';'
@@ -40,9 +43,21 @@ store_in_groups = True
 
 # Path to the log file that will be generated
 log_file = "log.txt"
+
+# Decompression mode: raw, sub-folders, remove-folders
+#   - raw: decompress everything as it is, without modifying anything
+#   - sub-folders: the subfolders of the zip files are joined to the file name
+#                  and copied to the parent directory
+#   - remove-folders: all subfolders are removed and everything is moved to the
+#                     parent directory
+decompresion_mode = "sub-folders"
+
+# Prevent the creation of a directory with the name of the zip file (only in raw
+# and sub-folders)
+prevent_parent_directory = True
 ###############################################################################
 
-# Import required libraries
+# Import packages
 import os
 import zipfile
 import re
@@ -88,9 +103,23 @@ else:
 if store_in_groups:
     students = pd.read_csv(students_file, sep=csv_separator)
     students.replace('\s+', '_', regex=True, inplace=True)
-    students['FullName'] = (students['Name'].apply(unidecode.unidecode) +
-        '_' + students['Surname'].apply(unidecode.unidecode)) 
-    students['FullName'] = students['FullName'].str.upper()                     
+    students['FullName'] = (students[csv_name_column].apply(unidecode.unidecode) +
+        '_' + students[csv_surname_column].apply(unidecode.unidecode))
+    students['FullName'] = students['FullName'].str.upper()
+                            
+# Display initial parameters
+print("Starting the decompression of the files. Current configuration:")
+init_params_str = "  - Input directory: " + input_dir + "\n"
+init_params_str += "  - Output directory: " + output_dir + "\n"
+init_params_str += "  - Error directory: " + error_dir + "\n"
+init_params_str += "  - Students file: " + students_file + "\n"
+init_params_str += "  - Store in groups: " + str(store_in_groups) + "\n"
+init_params_str += "  - Decompression mode: " + decompresion_mode + "\n"
+if decompresion_mode == "sub-folders" or decompresion_mode == "raw":
+    init_params_str += "  - Prevent parent directory: " + str(prevent_parent_directory) + "\n"
+init_params_str += "\n\n"
+print(init_params_str)
+
 
 # Process each student and try to decompress their submissions
 i = 0
@@ -101,7 +130,7 @@ for dir_student in os.scandir(input_dir):
 
     if dir_student.is_dir(): # Only process directories
         # Infer the name of the student from the name of the directory
-        student_name = re.sub(r'_[0-9]+_assignsubmission_file_$', '', 
+        student_name = re.sub(r'_[0-9]+_assignsubmission_file.*$', '',
                               dir_student.name)
         student_name = unidecode.unidecode(student_name).replace(' ', '_')
         student_name = student_name.upper()
@@ -111,7 +140,7 @@ for dir_student in os.scandir(input_dir):
 
         # Find the group of the student (if store_in_groups is True)
         if store_in_groups:
-            group_search = students.loc[students['FullName'] == student_name].Group
+            group_search = students.loc[students['FullName'] == student_name][csv_group_column]
             if not group_search.empty:
                 group = group_search.iloc[0]
             else:
@@ -125,18 +154,60 @@ for dir_student in os.scandir(input_dir):
                 with zipfile.ZipFile(student_submission.path, 'r') as zip_ref:
                     zip_ref.extractall('aux_files/'+student_name)
 
-            # Copy the unzipped files to the output directory
-            if not os.path.exists(output_dir+'/'+group+'/'+student_name+'/'):
-                os.makedirs(output_dir+'/'+group+'/'+student_name+'/')
-            for root, dirs, files in os.walk('aux_files/'+student_name+'/'):
-                for file in files:
-                    shutil.copy2(os.path.join(root,file), output_dir+'/'+group+'/'+student_name+'/'+file)
+            # Perform the desired decompression mode
+            # Option "remove-folders": Remove all subfolders and move everything to the parent directory
+            if decompresion_mode == "remove-folders":
+                if not os.path.exists(output_dir+'/'+group+'/'+student_name+'/'):
+                    os.makedirs(output_dir+'/'+group+'/'+student_name+'/')
+                for root, dirs, files in os.walk('aux_files/'+student_name+'/'):
+                    for file in files:
+                        shutil.copy2(os.path.join(root,file), output_dir+'/'+group+'/'+student_name+'/'+file)
+                
+            # Option "sub-folders": The subfolders of the zip files are joined to the file name and copied to the parent directory
+            elif decompresion_mode == "sub-folders":
+                if not os.path.exists(output_dir+'/'+group+'/'+student_name+'/'):
+                    os.makedirs(output_dir+'/'+group+'/'+student_name+'/')
+                # If there is a single folder and nothing else in the first level, avoid that folder and move to its content
+                if prevent_parent_directory and len(os.listdir('aux_files/'+student_name+'/')) == 1 and os.path.isdir('aux_files/'+student_name+'/'+os.listdir('aux_files/'+student_name+'/')[0]):
+                    for root, dirs, files in os.walk('aux_files/'+student_name+'/'+os.listdir('aux_files/'+student_name+'/')[0]+'/'):
+                        sub_folder = ""
+                        if len(root.split('/')[-1]) > 0:
+                            sub_folder = root.split('/')[-1] + '_'
+                        # Avoid hidden folders
+                        if root.split('/')[-1].startswith('.'):
+                            continue
+                        for file in files:
+                            # Avoid hidden files
+                            if file.startswith('.'):
+                                continue
+                            shutil.copy2(os.path.join(root,file), output_dir+'/'+group+'/'+student_name+'/'+sub_folder+file)
+                else:
+                    for root, dirs, files in os.walk('aux_files/'+student_name+'/'):
+                        sub_folder = ""
+                        if len(root.split('/')[-1]) > 0:
+                            sub_folder = root.split('/')[-1] + '_'
+                        # Avoid hidden files
+                        if sub_folder.startswith('.'):
+                            continue
+                        for file in files:
+                            # Avoid hidden files
+                            if file.startswith('.'):
+                                continue
+                            shutil.copy2(os.path.join(root,file), output_dir+'/'+group+'/'+student_name+'/'+sub_folder+file)
+
+            # Option "raw": Decompress everything as it is, without modifying anything
+            elif decompresion_mode == "raw": 
+                # If there is a single folder and nothing else in the first level, avoid that folder and move to its content
+                if prevent_parent_directory and len(os.listdir('aux_files/'+student_name+'/')) == 1 and os.path.isdir('aux_files/'+student_name+'/'+os.listdir('aux_files/'+student_name+'/')[0]):
+                    shutil.copytree('aux_files/'+student_name+'/'+os.listdir('aux_files/'+student_name+'/')[0]+'/', output_dir+'/'+group+'/'+student_name+'/')
+                else:
+                    shutil.copytree('aux_files/'+student_name+'/', output_dir+'/'+group+'/'+student_name+'/')
 
             log['extracted'][dir_student.name] = "Ok"
         except Exception as e:
             log['errors'][dir_student.name] = str(e)
 
-            # Copy the erroneous submission to the error directory
+            # Copiar archivos
             shutil.copytree(dir_student.path, error_dir+'/'+group+'/'+student_name+'/')
 
     else: # If it is not a directory, copy it to the error directory
@@ -155,6 +226,7 @@ if os.path.exists('aux_files/') and os.path.isdir('aux_files/'):
 # Write log to file
 output_str = ""
 with open(log_file, 'w') as file:
+    output_str += init_params_str
     output_str += "\n CORRECTLY DECOMPRESSED:\n"
     for alu in log['extracted'].keys():
         output_str += "  + "+alu + ': ' + log['extracted'][alu] + "\n"
