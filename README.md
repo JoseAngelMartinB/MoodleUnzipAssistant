@@ -1,6 +1,6 @@
 # MoodleUnzipAssistant
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 
@@ -28,14 +28,47 @@ Python code for extracting and organizing student submissions from Moodle. It st
 3. Customize the parameters in the `MoodleUnzipAssistant.py` file according to your needs:
 
     ```shell
-    # Configure parameters
-    input_dir = "MoodleFiles"
-    output_dir = "output"
-    error_dir = "Errors"
-    students_file = "students.csv"
-    csv_separator = ';'
-    store_in_groups = True
-    log_file = "log.txt"
+   # Path to the directory containing the submissions as downloaded from Moodle
+   input_dir = "MoodleFiles"
+   
+   # Path to the directory where the decompressed submissions will be stored
+   output_dir = "output"
+   
+   # Path to the directory where the submissions that could not be decompressed
+   # will be stored
+   error_dir = "Errors"
+   
+   # Path to the file containing the list of students and their groups. This file
+   # should be a CSV file with the following columns:
+   #   - Group: Group of the student (only if store_in_groups is True, otherwise
+   #            this column will be ignored)
+   #   - Name: Name of the student
+   #   - Surname: Surname/s of the student
+   students_file = "alumnos.csv"
+   csv_group_column = "Group"
+   csv_name_column = "Name"
+   csv_surname_column = "Surname"
+   
+   # CSV separator
+   csv_separator = ';'
+   
+   # Would you like to store the submissions depending on the group of the student?
+   store_in_groups = True
+   
+   # Path to the log file that will be generated
+   log_file = "log.txt"
+   
+   # Decompression mode: raw, sub-folders, remove-folders
+   #   - raw: decompress everything as it is, without modifying anything
+   #   - sub-folders: the subfolders of the zip files are joined to the file name
+   #                  and copied to the parent directory
+   #   - remove-folders: all subfolders are removed and everything is moved to the
+   #                     parent directory
+   decompresion_mode = "sub-folders"
+   
+   # Prevent the creation of a directory with the name of the zip file (only in raw
+   # and sub-folders)
+   prevent_parent_directory = True
     ```
 
 4. Run the script:
