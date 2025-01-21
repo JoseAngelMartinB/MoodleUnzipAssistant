@@ -31,9 +31,9 @@ error_dir = "Errors"
 #   - Name: Name of the student
 #   - Surname: Surname/s of the student
 students_file = "alumnos.csv"
-csv_group_column = "Grupo"
-csv_name_column = "Nombre"
-csv_surname_column = "Apellidos"
+csv_group_column = "Group"
+csv_name_column = "Name"
+csv_surname_column = "Surname"
 
 # CSV separator
 csv_separator = ';'
