@@ -101,8 +101,15 @@ else:
 
 # Read list of students and their groups
 if store_in_groups:
+    # Check if the csv_separator is correct
+    with open(students_file, 'r') as file:
+        first_line = file.readline()
+        if csv_separator not in first_line:
+            print("Error: The separator used in the students file is not correct.")
+            print("Please check the value of csv_separator.")
+            exit(1)
     students = pd.read_csv(students_file, sep=csv_separator)
-    students.replace('\s+', '_', regex=True, inplace=True)
+    students.replace(r'\s+', '_', regex=True, inplace=True)
     students['FullName'] = (students[csv_name_column].apply(unidecode.unidecode) +
         '_' + students[csv_surname_column].apply(unidecode.unidecode))
     students['FullName'] = students['FullName'].str.upper()
